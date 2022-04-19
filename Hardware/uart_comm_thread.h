@@ -45,7 +45,7 @@ private:
     // private members 
     void sendCmd(char);     // sends comand to device
     void callBack();        // ISR for storing serial bytes
-    float Ts;
+    std::chrono::milliseconds Ts;
     void send(uint8_t , uint8_t , uint16_t, char *);
     bool analyse_received_data(void);
     bool gpa_stop_sent;

@@ -4,8 +4,8 @@ using namespace std;
 // contructor for controller loop
 state_machine::state_machine(sensors_actuators *sa, ControllerLoop *loop, float Ts) : thread(osPriorityNormal,4096)
 {
-    this->Ts = Ts;
-    this->CS = INIT;
+    this->Ts = std::chrono::milliseconds {static_cast<long int>(1000*Ts)};;
+    this->CS = INITIAL;
     this->m_sa = sa;
     this->m_loop = loop;
     ti.reset();
@@ -21,41 +21,49 @@ void state_machine::loop(void){
     while(1)
         {
         ThisThread::flags_wait_any(threadFlag);
+        
         // THE LOOP ------------------------------------------------------------
-        switch(CS)
-            {
-            case INIT:
+        switch(CS) {
+
+            case INITIAL:
                 if(m_sa->key_was_pressed)
                     {
                     printf("switch to FLAT\r\n");
                     m_sa->key_was_pressed = false;
-                    CS = FLAT;
+                    m_loop->Button_Status = CS = FLAT;
+                    //m_loop->Button_Status = CS;
                     }
                 break;
+
             case FLAT:
-                
                 if(m_sa->key_was_pressed)
-                    m_sa->enable_escon();
-                    m_sa->write_current(1);
+                    //m_sa->enable_escon();
+                    //m_sa->write_current(1);
                     {
                     printf("switch to BALANCE\r\n");
-                    m_sa->disable_escon();
-                    m_sa->write_current(0);
+                    //m_sa->disable_escon();
+                    //m_sa->write_current(0);
                     m_sa->key_was_pressed = false;
-                    CS = BALANCE;
+                    m_loop->Button_Status = CS = BALANCE;
+                    //m_loop->Button_Status = CS;
                     }
                 break;
+
             case BALANCE:
                 if(m_sa->key_was_pressed)
                     {
                     printf("switch to INIT\r\n");
                     m_sa->key_was_pressed = false;
-                    CS = INIT;
+                    m_loop->Button_Status = CS = INITIAL;
+                    //m_loop->Button_Status = CS;
                     }
                 break;
+
             default:
                 break;
+
             }   // end switch
+
         }// endof the main loop
 }
 

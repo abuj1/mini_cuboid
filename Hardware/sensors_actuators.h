@@ -30,11 +30,11 @@ public:
     bool key_was_pressed;
    
 private:
-    IIR_filter di;
+    IIR_filter diff;
     ///------------- Encoder -----------------------
     EncoderCounter counter;    // initialize counter on PA_6 and PC_7
     AnalogOut i_des;           // desired current values
-    DigitalOut i_enable;
+    DigitalOut Escon_Enable;
     InterruptIn button;
     mpu6500_spi imu;
     //-------------------------------------

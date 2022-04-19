@@ -80,7 +80,7 @@ uart_comm_thread::uart_comm_thread(BufferedSerial *com, float Ts): thread(osPrio
  {  
     // init serial
     this->uart = com;
-    this->Ts = Ts;
+    this->Ts = std::chrono::milliseconds {static_cast<long int>(1000*Ts)};
     this->csm = 0;
     gpa_stop_sent = false;
 }

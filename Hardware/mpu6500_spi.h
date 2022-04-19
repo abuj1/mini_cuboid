@@ -32,9 +32,9 @@ class mpu6500_spi
     BITS_DLPF_CFG_2100HZ_NOLPF
     returns 1 if an error occurred
     -----------------------------------------------------------------------------------------------*/
-    bool init(int sample_rate_div,int low_pass_filter);
-		bool init_inav(void);
-
+    //bool init(int sample_rate_div,int low_pass_filter);
+	
+    bool initialize(void);
 
     /*-----------------------------------------------------------------------------------------------
                         CONFIGURATION ACCORDING TO YOUR APPLICATION

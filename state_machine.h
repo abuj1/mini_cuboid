@@ -2,10 +2,10 @@
 #include "sensors_actuators.h"
 #include "ControllerLoop.h"
 
-#define INIT 1
+#define INITIAL 1
 #define FLAT 2
 #define BALANCE 3
-
+#define STUCK 3
 
 // This is the loop class, it is not a controller at first hand, it guarantees a cyclic call
 class state_machine
@@ -22,7 +22,7 @@ private:
     Ticker ticker;
     ThreadFlag threadFlag;
     Timer ti;
-    float Ts;
+    std::chrono::milliseconds Ts;
     void sendSignal();
     sensors_actuators *m_sa;
     ControllerLoop *m_loop;
