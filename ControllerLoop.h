@@ -57,7 +57,7 @@ private:
     //PID_Cntrl flat_vel_cntrl;
     //PID_Cntrl bal_vel_cntrl;
     PID_Cntrl  C1;  // Defining the 1st Loop Controller (PI-Part)
-    PID_Cntrl  C2;   // Defining the PI Controller for Chase (State 2) to keep motor velocity at zero
+    //PID_Cntrl  C2;   // Defining the PI Controller for Chase (State 2) to keep motor velocity at zero
     //PID_Cntrl  C3(Kp_1*3,Ki_1*2.0,Kd_2,Tf_2,Ts,uMin1,uMax1); // Safety Implementation in Case
 
     IIR_filter     Gaccx, Gaccy, Ggyro;

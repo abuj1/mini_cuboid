@@ -5,7 +5,7 @@ using namespace std;
 #define pi 3.1415927
 
 // contructor for controller loop
-ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts) : thread(osPriorityHigh,4096)
+ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts) : thread(osPriorityHigh,4096), C1(0.25/4.0, -0.004, 0, 1, 0.007f, -1.0f, 1.0f)
 {
     this->Ts = std::chrono::milliseconds {static_cast<long int>(1000*Ts)};
     this->m_sa = sa;
@@ -37,10 +37,10 @@ ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts) : thread(osPrior
     uMax =  15.0f;        // Maximum Current Allowed
     //flat_vel_cntrl.setup(...);
     //bal_vel_cntrl.setup(...);
-    C1.setup(Kp_1, Ki_1, Kd_1, Tf_1, Ts, uMin1, uMax1);
-    C2.setup(Kp_2, Ki_2, Kd_2, Tf_2, Ts, uMin1, uMax1);
+    //C1.setup(Kp_1, Ki_1, Kd_1, Tf_1, Ts, uMin1, uMax1);
+    //C2.setup(Kp_2, Ki_2, Kd_2, Tf_2, Ts, uMin1, uMax1);
     C1.reset(0.0f);
-    C2.reset(0.0f);
+    //C2.reset(0.0f);
 
     ti.reset();
     ti.start();
@@ -87,13 +87,13 @@ void ControllerLoop::loop(void){
             case INITIAL:
                 m_sa->enable_escon();
                 m_sa->write_current(0.0f);
-                C2.reset(0.0f);
+                C1.reset(0.0f);
                 break;
 
             case FLAT:
                 //m_sa->write_current(0.5f);
                 PID_Input = 0.0f - m_sa->get_phi();
-                PID_Output = C2.update(PID_Input);
+                PID_Output = C1.update(-1*PID_Input);
                 m_sa->write_current(PID_Output);
                 break;
 
