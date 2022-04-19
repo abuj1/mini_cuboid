@@ -15,6 +15,7 @@ public:
 
     virtual ~PID_Cntrl();
 
+    void    setup(float P, float I, float D, float tau_f, float Ts, float uMin, float uMax);
     void    reset(float initValue);
     void    setCoefficients(float P, float I, float D, float tau_f, float Ts, float uMin, float uMax);
     float   update(float e);

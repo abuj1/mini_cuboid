@@ -13,8 +13,35 @@ ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts) : thread(osPrior
     bal_cntrl_enabled = false;
     vel_cntrl_enabled = false;
 
+    // PID (PI Parameters)
+    
+    // PID 1 - Velocity control after lift-up
+    Kp_1 = -0.02;//- 0.01;
+    Ki_1 = -0.004;//- 0.05;
+    Kd_1 = 0; // No D-Part
+    Tf_1 = 1; // No D-Part
+    
+    // Controller Loop (PI-Part) in Case 2 (breaking case)
+    Kp_2 = 0.25/4.0;
+    Ki_2 = 0.25/4.0;
+    Kd_2 = 0; // No D-Part
+    Tf_2 = 1; // No D-Part
+    
+    // Saturation Parameters
+    // PI Controller Limits
+    uMin1 = -1.0f; //-5.0f;
+    uMax1 = 1.0f; //  5.0f;
+    
+    // Cuboid Escon Input Limits in Amps
+    uMin = -15.0f;        // Minimum Current Allowed
+    uMax =  15.0f;        // Maximum Current Allowed
     //flat_vel_cntrl.setup(...);
     //bal_vel_cntrl.setup(...);
+    C1.setup(Kp_1, Ki_1, Kd_1, Tf_1, Ts, uMin1, uMax1);
+    C2.setup(Kp_2, Ki_2, Kd_2, Tf_2, Ts, uMin1, uMax1);
+    C1.reset(0.0f);
+    C2.reset(0.0f);
+
     ti.reset();
     ti.start();
 
@@ -58,16 +85,20 @@ void ControllerLoop::loop(void){
         switch(Button_Status) {
 
             case INITIAL:
-                    //m_sa->enable_escon();
-                    m_sa->write_current(0.0f);
+                m_sa->enable_escon();
+                m_sa->write_current(0.0f);
+                C2.reset(0.0f);
                 break;
 
             case FLAT:
-                    m_sa->write_current(1.0f);
+                //m_sa->write_current(0.5f);
+                PID_Input = 0.0f - m_sa->get_phi();
+                PID_Output = C2.update(PID_Input);
+                m_sa->write_current(PID_Output);
                 break;
 
             case BALANCE:
-                    m_sa->write_current(2.0f);
+                m_sa->write_current(0.25f);
                 break;
 
             default:
@@ -94,8 +125,8 @@ void ControllerLoop::loop(void){
             write_counter = 0;
             /* write output via serial buffer */
             printf(
-                    "ax: %f ay: %f gz: %f phi:%f, phi1: %0.6f, Button Status: %d; \r\n",
-                    m_sa->get_ax(),m_sa->get_ay(),m_sa->get_gz(),m_sa->get_phi(), phi1, Button_Status);
+                    "ax: %f ay: %f gz: %f phi:%f, phi1: %0.6f, V: %0.2f, Button Status: %d; \r\n",
+                    m_sa->get_ax(),m_sa->get_ay(),m_sa->get_gz(),m_sa->get_phi(), phi1, m_sa->get_vphi(),Button_Status);
         
         }
         

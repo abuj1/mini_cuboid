@@ -34,8 +34,31 @@ private:
     ThreadFlag threadFlag;
     Mutex          mutex;
     Timer ti;
-    PID_Cntrl flat_vel_cntrl;
-    PID_Cntrl bal_vel_cntrl;
+
+    //
+    float PID_Input, PID_Output;
+    
+    // PID (PI Parameters)
+    
+    // PID 1 - Velocity control after lift-up
+    float Kp_1, Ki_1, Kd_1, Tf_1;
+    
+    // Controller Loop (PI-Part) in Case 2 (breaking case)
+    float Kp_2, Ki_2, Kd_2, Tf_2;
+    
+    // Saturation Parameters
+    // PI Controller Limits
+    float uMin1, uMax1;
+    
+    // Cuboid Escon Input Limits in Amps
+    float uMin, uMax;
+
+    // PID (PI) Controller
+    //PID_Cntrl flat_vel_cntrl;
+    //PID_Cntrl bal_vel_cntrl;
+    PID_Cntrl  C1;  // Defining the 1st Loop Controller (PI-Part)
+    PID_Cntrl  C2;   // Defining the PI Controller for Chase (State 2) to keep motor velocity at zero
+    //PID_Cntrl  C3(Kp_1*3,Ki_1*2.0,Kd_2,Tf_2,Ts,uMin1,uMax1); // Safety Implementation in Case
 
     IIR_filter     Gaccx, Gaccy, Ggyro;
 

@@ -8,6 +8,11 @@
 
 PID_Cntrl::PID_Cntrl(float P, float I, float D, float tau_f, float Ts, float uMin, float uMax)
 {
+    setup(P, I, D, tau_f, Ts, uMin, uMax);
+}
+
+void PID_Cntrl::setup(float P, float I, float D, float tau_f, float Ts, float uMin, float uMax)
+{
     // ------------------
     this->kp = P;
     this->ki = I;

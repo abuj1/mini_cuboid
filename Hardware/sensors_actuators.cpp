@@ -51,11 +51,11 @@ void sensors_actuators::disable_escon(void)
     Escon_Enable = 0;    
 }
 
-void sensors_actuators::write_current(float i_des)
+void sensors_actuators::write_current(float i_des_)
 {
         // Set Voltage output equal to the scaled desired current value
-        //i_des = i2u(i_des);   
-        i_des = 0.5f;
+        i_des = i2u(i_des_);   
+        
 }
 
 float sensors_actuators::get_phi(void)
