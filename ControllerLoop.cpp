@@ -5,7 +5,7 @@ using namespace std;
 #define pi 3.1415927
 
 // contructor for controller loop
-ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts) : thread(osPriorityHigh,4096), C1(0.25/4.0, -0.004, 0, 1, 0.007f, -1.0f, 1.0f)
+ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts): thread(osPriorityHigh,4096), C1(-0.02, -0.004, 0, 1, 0.007f, -1.0f, 1.0f)
 {
     this->Ts = std::chrono::milliseconds {static_cast<long int>(1000*Ts)};
     this->m_sa = sa;
