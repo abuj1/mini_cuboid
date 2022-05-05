@@ -46,6 +46,7 @@ private:
     float PID_Input, PID_Output, PID_Input2, PID_Output2;
     float current, i_desired;
     bool is_stuck;
+    float angle_offset;
     
     // PID (PI Parameters)
     

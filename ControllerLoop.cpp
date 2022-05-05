@@ -79,6 +79,7 @@ ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts):
     // Initialisation of variables
     i_desired = 0;
     is_stuck = 0;
+    angle_offset = -2.0f; // degrees
 
     
     }
@@ -146,7 +147,7 @@ void ControllerLoop::loop(void){
         // ------------------------------
 
         // Check if the cuboid is not stuck and is in the correct position to run
-        if (stuck() && !is_stuck) {
+        if (stuck() && !is_stuck && Button_Status != INITIAL) {
             Button_Status = STUCK;
             is_stuck = 1;
         } else if (safe_to_run()) {
@@ -155,7 +156,7 @@ void ControllerLoop::loop(void){
             i_desired = 0.0f;
             saturate_and_write_current(i_desired);
         }
-        if(abs(m_sa->get_vphi()) < 50.0f && !stuck() && is_stuck) {
+        if(abs(m_sa->get_vphi()) < 50.0f && !stuck() && is_stuck && Button_Status != INITIAL) {
             is_stuck = 0;
             Button_Status = BALANCE;
         }
@@ -187,7 +188,7 @@ float ControllerLoop::estimate_angle(void)
     double AccY_g = m_sa->get_ay();
     double GyroZ_RadiansPerSecond = m_sa->get_gz();
     // ----- Combine Accelerometer Data and Gyro Data to Get Angle ------
-    double Cuboid_Angle_Radians =  -1*atan2(-Gaccx(AccX_g), Gaccy(AccY_g)) + Ggyro(GyroZ_RadiansPerSecond) - PI/4.0f - 1.5*0.01745; // + 0.7854f
+    double Cuboid_Angle_Radians =  -1*atan2(-Gaccx(AccX_g), Gaccy(AccY_g)) + Ggyro(GyroZ_RadiansPerSecond) - PI/4.0f + angle_offset*0.01745; // + 0.7854f
 
     return Cuboid_Angle_Radians;
     //return 0;
