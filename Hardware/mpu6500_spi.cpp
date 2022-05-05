@@ -62,7 +62,7 @@ bool mpu6500_spi::configuration(){
 	write2spi(MPUREG_CONFIG,BITS_DLPF_CFG_42HZ); // Set Low Pass Filter Bandwidth to 41Hz (5.9 ms) for the Gyroscope
     write2spi(MPUREG_ACCEL_CONFIG_2,0x03); // Set Low Pass Filter Bandwidth to 41Hz (11.8 ms) for the Accelerometer
     set_gyro_scale(BITS_FS_1000DPS); // Change the scale of the Gyroscope to +/- 1000 degrees/sec
-    set_acc_scale(BITS_FS_2G); // Change the scale of the Accelerometer to +/- 2g - Sensitivity: 16,384 LSB/mg
+    set_acc_scale(BITS_FS_4G); // Change the scale of the Accelerometer to +/- 2g - Sensitivity: 16,384 LSB/mg
     
 	return true;
     
@@ -310,7 +310,7 @@ float mpu6500_spi::readGyro(int axis){
     return data;    
 }
 
-float mpu6500_spi::readGyro_raw(int axis){
+int16_t mpu6500_spi::readGyro_raw(int axis){
     uint8_t responseH,responseL;
     int16_t bit_data;
     float data;

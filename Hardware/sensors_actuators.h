@@ -16,15 +16,15 @@ Tasks for students:
 class sensors_actuators
 {
 public:
-    sensors_actuators(float Ts);        // default constructor
-    virtual ~sensors_actuators();   // deconstructor
-    void read_sensors_calc_speed(void);       // read both encoders and calculate speeds
-    float get_phi(void);         // get angle of motor k
-    float get_vphi(void);          // get speed of motor k
+    sensors_actuators(float Ts);         // default constructor
+    virtual ~sensors_actuators();        // deconstructor
+    void read_sensors_calc_speed(void);  // read both encoders and calculate speeds
+    float get_phi(void);                 // get angle of motor k
+    float get_vphi(void);                // get speed of motor k
     float get_ax(void);
     float get_ay(void);
     float get_gz(void);
-    void write_current(float);  // write current to motors (0,...) for motor 1, (1,...) for motor 2
+    void write_current(float);           // write current to motors (0,...) for motor 1, (1,...) for motor 2
     void enable_escon();
     void disable_escon();
     bool key_was_pressed;

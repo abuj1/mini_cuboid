@@ -30,8 +30,8 @@ void state_machine::loop(void){
                     {
                     printf("switch to FLAT\r\n");
                     m_sa->key_was_pressed = false;
-                    m_loop->Button_Status = CS = FLAT;
-                    //m_loop->Button_Status = CS;
+                    CS = FLAT;
+                    m_loop->Button_Status = CS;
                     }
                 break;
 
@@ -44,8 +44,8 @@ void state_machine::loop(void){
                     //m_sa->disable_escon();
                     //m_sa->write_current(0);
                     m_sa->key_was_pressed = false;
-                    m_loop->Button_Status = CS = BALANCE;
-                    //m_loop->Button_Status = CS;
+                    CS = BALANCE;
+                    m_loop->Button_Status = CS;
                     }
                 break;
 
@@ -54,8 +54,8 @@ void state_machine::loop(void){
                     {
                     printf("switch to INIT\r\n");
                     m_sa->key_was_pressed = false;
-                    m_loop->Button_Status = CS = INITIAL;
-                    //m_loop->Button_Status = CS;
+                    CS = INITIAL;
+                    m_loop->Button_Status = CS;
                     }
                 break;
 

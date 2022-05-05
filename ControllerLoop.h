@@ -11,7 +11,7 @@
 #define INITIAL 1
 #define FLAT 2
 #define BALANCE 3
-#define STUCK 3
+#define STUCK 4
 
 // This is the loop class, it is not a controller at first hand, it guarantees a cyclic call
 class ControllerLoop
@@ -24,7 +24,11 @@ public:
     void enable_bal_cntrl(void);
     void reset_cntrl(void);
     void disable_all_cntrl();
-    
+    bool safe_to_run();
+    bool stuck();
+    void saturate_and_write_current(float i_desired_);
+    void print_variables();
+
     int Button_Status = 1;                  // User Button Status
 
 private:
@@ -36,7 +40,12 @@ private:
     Timer ti;
 
     //
-    float PID_Input, PID_Output;
+    // Controller Variables
+    float loop1_output; // Loop 1 controller output
+    float loop2_output;  // Loop 2 controller output
+    float PID_Input, PID_Output, PID_Input2, PID_Output2;
+    float current, i_desired;
+    bool is_stuck;
     
     // PID (PI Parameters)
     
@@ -48,16 +57,19 @@ private:
     
     // Saturation Parameters
     // PI Controller Limits
-    float uMin1, uMax1;
+    float u_min2, u_max2;
     
     // Cuboid Escon Input Limits in Amps
-    float uMin, uMax;
+    float u_min1, u_max1;
+
+    // Sate Space Controller Values
+    float K_SS_Controller[2];
 
     // PID (PI) Controller
     //PID_Cntrl flat_vel_cntrl;
     //PID_Cntrl bal_vel_cntrl;
     PID_Cntrl  C1;  // Defining the 1st Loop Controller (PI-Part)
-    //PID_Cntrl  C2;   // Defining the PI Controller for Chase (State 2) to keep motor velocity at zero
+    PID_Cntrl  C2;   // Defining the PI Controller for Chase (State 2) to keep motor velocity at zero
     //PID_Cntrl  C3(Kp_1*3,Ki_1*2.0,Kd_2,Tf_2,Ts,uMin1,uMax1); // Safety Implementation in Case
 
     IIR_filter     Gaccx, Gaccy, Ggyro;
@@ -67,11 +79,14 @@ private:
     bool vel_cntrl_enabled;
     void sendSignal();
     float estimate_angle();
+    //float saturate();
     sensors_actuators *m_sa;
 
-    float          time, accx, accy, gyro, phi1, phi2, dphi2, M;
+    float          time, accx, accy, gyro, phi1, phi1_degrees, phi2, dphi2, M;
 
     int            write_counter, write_counter_write_val;
+
+    
 
 
     

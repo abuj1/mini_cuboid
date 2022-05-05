@@ -61,7 +61,7 @@ class mpu6500_spi
     returns the value in Gs
     -----------------------------------------------------------------------------------------------*/
     //float readAcc(int axis);
-		float readAcc(int axis);
+	float readAcc(int axis);
     int16_t readAcc_raw(int axis);
     void readAcc(void);
     
@@ -75,7 +75,7 @@ class mpu6500_spi
     -----------------------------------------------------------------------------------------------*/
     float readGyro(int axis);
     void readGyro(void);
-    float readGyro_raw(int axis);
+    int16_t readGyro_raw(int axis);
 	void readAccTempGyro(void);
 
     /*-----------------------------------------------------------------------------------------------

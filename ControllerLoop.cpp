@@ -4,132 +4,167 @@ using namespace std;
 #define PI 3.1415927
 #define pi 3.1415927
 
-// contructor for controller loop
-ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts): thread(osPriorityHigh,4096), C1(-0.02, -0.004, 0, 1, 0.007f, -1.0f, 1.0f)
+//******************************************************************************
+//------------------ Control Loop (called via interrupt) -----------------------
+//******************************************************************************
+
+// contructors for controller loop
+ControllerLoop::ControllerLoop(sensors_actuators *sa, float Ts):
+                    thread(osPriorityHigh,4096), 
+                    C1(-0.035, -0.004, 0, 1, 0.007f, -3.0f, 3.0f), 
+                    C2(0.25/4.0, 0.25/4.0, 0, 1, 0.007f, -3.0f, 3.0f)
 {
-    this->Ts = std::chrono::milliseconds {static_cast<long int>(1000*Ts)};
+    this->Ts = std::chrono::milliseconds{static_cast<long int>(1000*Ts)};
     this->m_sa = sa;
-
-    bal_cntrl_enabled = false;
-    vel_cntrl_enabled = false;
-
-    // PID (PI Parameters)
     
-    // PID 1 - Velocity control after lift-up
-    Kp_1 = -0.02;//- 0.01;
-    Ki_1 = -0.004;//- 0.05;
-    Kd_1 = 0; // No D-Part
-    Tf_1 = 1; // No D-Part
+    // -------------------------------
+    // Initialisations
+    // -------------------------------
+
+    // Controller Variables: SS Controller Values and Saturation Limits
+    // Sate Space Controller Values from Matlab
+    K_SS_Controller[0]  = -64.69; // phi1
+    K_SS_Controller[1]  = -4.272; // Vphi1
     
-    // Controller Loop (PI-Part) in Case 2 (breaking case)
+    // Escon Input Limits in Amps
+    u_min1 = -15.0f;        // Minimum Current Allowed
+    u_max1 =  15.0f;        // Maximum Current Allowed
+    // -------------------------------
+    
+    // PID initialisation
+    // PID (PI Parameters from Matlab)
+    
+    // PID 1: Velocity control during balancing (slow controller)
+    Kp_1 = -0.02;   // -0.01;
+    Ki_1 = -0.004;  // -0.05;
+    Kd_1 = 0;       // No D-Part
+    Tf_1 = 1;       // No D-Part
+    
+    // PID 2: Velocity control during breaking (fast controller)
     Kp_2 = 0.25/4.0;
     Ki_2 = 0.25/4.0;
-    Kd_2 = 0; // No D-Part
-    Tf_2 = 1; // No D-Part
+    Kd_2 = 0;       // No D-Part
+    Tf_2 = 1;       // No D-Part
     
     // Saturation Parameters
     // PI Controller Limits
-    uMin1 = -1.0f; //-5.0f;
-    uMax1 = 1.0f; //  5.0f;
-    
-    // Cuboid Escon Input Limits in Amps
-    uMin = -15.0f;        // Minimum Current Allowed
-    uMax =  15.0f;        // Maximum Current Allowed
-    //flat_vel_cntrl.setup(...);
-    //bal_vel_cntrl.setup(...);
+    u_min2 = -3.0f;
+    u_max2 =  3.0f; 
+
+    // PID Setup
     //C1.setup(Kp_1, Ki_1, Kd_1, Tf_1, Ts, uMin1, uMax1);
     //C2.setup(Kp_2, Ki_2, Kd_2, Tf_2, Ts, uMin1, uMax1);
     C1.reset(0.0f);
-    //C2.reset(0.0f);
+    C2.reset(0.0f);
+    // -------------------------------
 
+    // Accelerometer and Gyroscope IIR Filters
+    float tau = 0.9f;
+    Gaccx .setup(tau, Ts, 1.0f); // low pass
+    Gaccy .setup(tau, Ts, 1.0f); // low pass
+    Ggyro .setup(tau, Ts, tau);  // high pass
+    // -------------------------------
+
+    // Serial print related variables
+    // Declare how frequenctly do you want the print statement to print
+    write_counter_write_val = 14; // every 14th measurement is send via serial 
+    write_counter = 0;
+    // -------------------------------
+
+    // Timer ti
     ti.reset();
     ti.start();
+    // -------------------------------
 
-    // 
+    // Initialisation of variables
+    i_desired = 0;
+    is_stuck = 0;
 
-    /* setup all IIR_filter objects */
-    float tau = 0.5f;
-    Gaccx .setup(tau, Ts, 1.0f);
-    Gaccy .setup(tau, Ts, 1.0f);
-    Ggyro .setup(tau, Ts, tau);
-
-    /* write_counter_write_val = 14 means every 14th measurement is send via serial */
-    write_counter_write_val = 14;
-    write_counter = 0;
+    
     }
 
 // decontructor for controller loop
 ControllerLoop::~ControllerLoop() {}
 
-// ----------------------------------------------------------------------------
+// -------------------------------
+// Main Controller Loop
+// -------------------------------
+
 // this is the main loop called every Ts with high priority
 void ControllerLoop::loop(void){
-    
-    float i_des = 0;
-    //uint8_t k = 0;
     
     while(true)
     {
         ThisThread::flags_wait_any(threadFlag);
         mutex.lock();
-        // THE LOOP ------------------------------------------------------------
-        //printf("HI");
 
-        m_sa->read_sensors_calc_speed();       // first read all sensors, calculate motor speed
-        phi1 = estimate_angle();            
-        phi1 = phi1*180.0f/pi; // Convert to Degrees
+        // ----- Start of Controller Loop -----
 
-        // ------------------------- Controller -----------------------------
- 
-        // Switch Statement Maybe?......
+        // Read raw sensor readings and condition them to useful data
+        /* Read raw IMU data 
+           Read raw encoder data thru quadrature encoder (QDEC) chip and calculate motor speed */
+        m_sa->read_sensors_calc_speed();       
+        phi1 = estimate_angle();       // Complementary filter (implemented below)  
+        phi1_degrees = phi1*180.0f/pi; // Convert to Degrees
+        // -------------------------------
+        
+        // Controller State Machine
         switch(Button_Status) {
 
-            case INITIAL:
+            case INITIAL: // desired current is set to zero
                 m_sa->enable_escon();
-                m_sa->write_current(0.0f);
                 C1.reset(0.0f);
+                C2.reset(0.0f);
+                i_desired = 0;
                 break;
 
-            case FLAT:
-                //m_sa->write_current(0.5f);
-                PID_Input = 0.0f - m_sa->get_phi();
-                PID_Output = C1.update(-1*PID_Input);
-                m_sa->write_current(PID_Output);
+            case FLAT: // Break flywheel (control flywheel speed to zero)
+                PID_Input = 0.0f - m_sa->get_vphi();
+                PID_Output = C2.update(PID_Input);
+                i_desired = PID_Output;
                 break;
 
-            case BALANCE:
-                m_sa->write_current(0.25f);
+            case BALANCE: // // Lift-up and balancing (state space controller)
+                // Current controller loop
+                // Loop 1
+                loop1_output = phi1*K_SS_Controller[0];
+                // Loop 2
+                loop2_output = (m_sa->get_gz())*K_SS_Controller[1];
+                // PI Controller
+                PID_Input = 0.0f - m_sa->get_vphi();
+                PID_Output = C1.update(PID_Input);
+                // System input (desired current)
+                i_desired = PID_Output - loop1_output - loop2_output; 
                 break;
+            case STUCK:
+                i_desired = 0;
+                C1.reset(0.0f);
+                C2.reset(0.0f);
+                Button_Status = FLAT;
+                
+        }  
+        // ------------------------------
 
-            default:
-                break;
-
-            }   // end switch
-
-
-        
-
-        /*
-        if(++k == 0)        
-            //printf("ax: %f ay: %f gz: %f phi:%f, phi1: %0.6f \r\n",m_sa->get_ax(),m_sa->get_ay(),m_sa->get_gz(),m_sa->get_phi(), phi1);
-
-        // -------------------------------------------------------------
-        m_sa->disable_escon();
-        //m_sa->enable_escon();
-        m_sa->write_current(i_des);                   // write to motor 0 
-        // handle enable
-        }// endof the main loop
-        */
-
-        if(++write_counter == write_counter_write_val) {
-            write_counter = 0;
-            /* write output via serial buffer */
-            printf(
-                    "ax: %f ay: %f gz: %f phi:%f, phi1: %0.6f, V: %0.2f, Button Status: %d; \r\n",
-                    m_sa->get_ax(),m_sa->get_ay(),m_sa->get_gz(),m_sa->get_phi(), phi1, m_sa->get_vphi(),Button_Status);
-        
+        // Check if the cuboid is not stuck and is in the correct position to run
+        if (stuck() && !is_stuck) {
+            Button_Status = STUCK;
+            is_stuck = 1;
+        } else if (safe_to_run()) {
+            saturate_and_write_current(i_desired);
+        } else {
+            i_desired = 0.0f;
+            saturate_and_write_current(i_desired);
         }
-        
+        if(abs(m_sa->get_vphi()) < 50.0f && !stuck() && is_stuck) {
+            is_stuck = 0;
+            Button_Status = BALANCE;
+        }
+        // ------------------------------
+
+        // Print desired variables
+        print_variables(); // Check function to declare the desired variables that you want to print
+
+        // ----- End of Controller Loop -----
         mutex.unlock();
     }
 }
@@ -152,11 +187,14 @@ float ControllerLoop::estimate_angle(void)
     double AccY_g = m_sa->get_ay();
     double GyroZ_RadiansPerSecond = m_sa->get_gz();
     // ----- Combine Accelerometer Data and Gyro Data to Get Angle ------
-    double Cuboid_Angle_Radians =  -1*atan2(-Gaccx(AccX_g), Gaccy(AccY_g)) + Ggyro(GyroZ_RadiansPerSecond) - PI/4.0f; // + 0.7854f
+    double Cuboid_Angle_Radians =  -1*atan2(-Gaccx(AccX_g), Gaccy(AccY_g)) + Ggyro(GyroZ_RadiansPerSecond) - PI/4.0f - 1.5*0.01745; // + 0.7854f
 
     return Cuboid_Angle_Radians;
     //return 0;
 }
+
+
+
 
 void ControllerLoop::enable_vel_cntrl(void)
 {
@@ -174,4 +212,41 @@ void ControllerLoop::disable_all_cntrl()
 {
     bal_cntrl_enabled = false;
     vel_cntrl_enabled = false;
+}
+
+bool ControllerLoop::safe_to_run()
+{
+    if (phi1_degrees > -60.0f && phi1_degrees < 60.0f) {
+        return true;
+    }
+    else return false; 
+}
+bool ControllerLoop::stuck()
+{
+    if ( abs(m_sa->get_vphi()) > 300.0f && (abs(phi1_degrees)<55.0f && abs(phi1_degrees)>35.0f) ) {
+        return true;
+    } 
+    else return false;
+}
+
+void ControllerLoop::saturate_and_write_current(float i_desired_)
+{
+    if (i_desired_ > u_max1) {
+        i_desired_ = u_max1;
+    }
+    else if (i_desired_ < u_min1) {
+        i_desired_ = u_min1;
+    }
+    m_sa->write_current(i_desired_);
+}
+
+void ControllerLoop::print_variables() 
+{
+    if(++write_counter == write_counter_write_val) {
+        write_counter = 0;
+        // Write output via serial buffer 
+        printf(
+                "ax: %f ay: %f gz: %f phi:%f, phi1: %0.6f, V: %0.2f, Button Status: %d; \r\n",
+                m_sa->get_ax(),m_sa->get_ay(),m_sa->get_gz(),m_sa->get_phi(), phi1_degrees, m_sa->get_vphi(), Button_Status);
+    }
 }
